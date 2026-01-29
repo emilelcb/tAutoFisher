@@ -16,7 +16,7 @@ cd terraria-auto-fisher
 
 # WARNING: if this fails try updating poetry
 # WARNING: (it compiles for me on poetry version 2.1.3)
-poetry update
+poetry install
 poetry run pyinstaller tAutoFisher/__main__.py -n tAutoFisher
 
 ./dist/tAutoFisher/tAutoFisher
