@@ -1,115 +1,46 @@
-#!/usr/bin/env python3
-
-from PyQt6.QtGui import QPixmap, QCursor
-from PyQt6.QtGui import QImage
-from PyQt6.QtCore import Qt
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QLabel
-from PyQt6.QtWidgets import QCheckBox
-from PyQt6.QtWidgets import QLayout
-from PyQt6.QtWidgets import QFrame
-from PyQt6.QtWidgets import QFormLayout
-from PyQt6.QtWidgets import QHBoxLayout
-from PyQt6.QtWidgets import QGridLayout
-from PyQt6.QtWidgets import QLineEdit
-from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtWidgets import QVBoxLayout
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtWidgets import QMainWindow
-from PyQt6.QtWidgets import QWidget
-from PyQt6.QtWidgets import QSpinBox
-from PyQt6.QtWidgets import QInputDialog
-from PyQt6.QtWidgets import QMessageBox
-from PyQt6.QtWidgets import QStatusBar
-from PyQt6.QtWidgets import QProgressBar
-from PyQt6.QtWidgets import QListWidget
-from PyQt6.QtWidgets import QDialog
-
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPixmap, QCursor, QImage
+from PySide6.QtWidgets import (
+    QLabel,
+    QCheckBox,
+    QLayout,
+    QFrame,
+    QFormLayout,
+    QHBoxLayout,
+    QGridLayout,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QSpinBox,
+    QInputDialog,
+    QMessageBox,
+    QStatusBar,
+    QProgressBar,
+    QListWidget,
+    QDialog
+)
 from PIL import Image, ImageGrab
 from PIL.ImageQt import ImageQt
-
 from pynput.keyboard import Listener
 
-import sys
 import cv2
-import time
 import numpy
 import pyautogui
-import subprocess
+
+from states import FisherStateMachine
+
+import time
 import configparser
 
-
-__version__ = '0.4'
-__author__ = 'Alexei Metlitski'
-
-def mouse_click():
-    global mouse
-    if sys.platform == 'linux':
-        subprocess.call(['xdotool', 'mousedown', '1'])
-        time.sleep(0.02)
-        subprocess.call(['xdotool', 'mouseup', '1'])
-    elif sys.platform == 'win32':
-        pyautogui.mouseDown()
-        time.sleep(0.02)
-        pyautogui.mouseUp()
-    else:
-        raise Error("This system is not supported yet: {0}".format(sys.platform))
-
-class InitializationFisherState():
-    def __init__(self):
-        self.code = "INIT"
-        self.description = "Waiting for user..."
-
-    def update(self, sense):
-        if sense > 1:
-            return CastingFisherState(cast = False)
-        else: return None
-
-class CastingFisherState():
-    def __init__(self, cast = True):
-        self.code = "CAST"
-        self.description = "Casting the line"
-        self.created_at = time.time()
-        if cast: mouse_click()
-
-    def update(self, sense):
-        if (time.time() - self.created_at) > 1 and sense < 1:
-            return WaitingFisherState()
-        else: return None
-
-class WaitingFisherState():
-    def __init__(self):
-        self.code = "WAIT"
-        self.description = "Waiting for movement"
-        self.created_at = time.time()
-
-    def update(self, sense):
-        if (time.time() - self.created_at) > 1 and sense > 1:
-            return ReelingInFisherState()
-        else: return None
-
-class ReelingInFisherState():
-    def __init__(self):
-        self.code = "REEL"
-        self.description = "Hooked - reeling in"
-        self.created_at = time.time()
-        mouse_click()
-
-    def update(self, sense):
-        if (time.time() - self.created_at) > 0.5 and sense < 1:
-            return CastingFisherState()
-        else: return None
-
-
-class FisherStateMachine():
-    def __init__(self):
-        self.state = InitializationFisherState()
-
-    def update(self, sense):
-        result = self.state.update(sense)
-        if result:
-            self.state = result
-
+def run(argv) -> int:
+    app = QApplication(argv)
+    app.setStyle('Windows')
+    view = AppUi()
+    view.show()
+    return app.exec()
 
 class MovementTracker():
     def __init__(self, n):
@@ -133,8 +64,7 @@ class MovementTracker():
         t, res = cv2.threshold(res, trsh, 255, cv2.THRESH_BINARY)
         return res
 
-
-shift = 50
+SHIFT = 50
 
 class AppUi(QMainWindow):
     def __init__(self):
@@ -159,20 +89,20 @@ class AppUi(QMainWindow):
         self.rightLayout = QVBoxLayout()
         self.mainLayout.addLayout(self.rightLayout)
 
-
+        shift = SHIFT * 2
         previews = QHBoxLayout()
         self.label1 = QLabel(self)
         self.label1.setFrameShape(QFrame.Shape.Panel)
         self.label1.setFrameShadow(QFrame.Shadow.Sunken)
         self.label1.setLineWidth(2)
-        self.label1.resize(shift*2, shift*2)
-        self.label1.setFixedSize(shift*2, shift*2)
+        self.label1.resize(shift, shift)
+        self.label1.setFixedSize(shift, shift)
         previews.addWidget(self.label1)
         self.label2 = QLabel(self)
         self.label2.setFrameShape(QFrame.Shape.Panel)
         self.label2.setFrameShadow(QFrame.Shadow.Sunken)
         self.label2.setLineWidth(2)
-        self.label2.setFixedSize(shift*2, shift*2)
+        self.label2.setFixedSize(shift, shift)
         previews.addWidget(self.label2)
         self.generalLayout.addLayout(previews)
 
@@ -391,13 +321,12 @@ class AppUi(QMainWindow):
         item = self.list.currentItem()
         return item.text() if item else None
 
-
     def _update_display(self):
         # Take screenshot
         x = int(self.input_screen_x.value())
         y = int(self.input_screen_y.value())
         t = int(self.input_treshold.value())
-        im = ImageGrab.grab((x-shift, y-shift, x+shift, y+shift))
+        im = ImageGrab.grab((x-SHIFT, y-SHIFT, x+SHIFT, y+SHIFT))
 
         # Convert to opencv
         frame = cv2.cvtColor(numpy.array(im), cv2.COLOR_RGB2BGR)
@@ -407,7 +336,7 @@ class AppUi(QMainWindow):
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
         preview = self.tracker.get_diff(gray, t)
         count = cv2.countNonZero(preview)
-        sense = count * int(self.input_sensivity.value()) / ((shift*2)**2)
+        sense = count * int(self.input_sensivity.value()) / ((SHIFT*2)**2)
         if self.state_machine:
             self.state_machine.update(sense)
 
@@ -446,17 +375,3 @@ class AppUi(QMainWindow):
                 self.potion_status.setText("Drink potions every {} seconds".format(self.input_drink_delay.value()))
         else:
             self.potion_status.setText("No potion drinking")
-
-
-
-# Client code
-def main():
-    """Main function."""
-    app = QApplication(sys.argv)
-    app.setStyle('Windows')
-    view = AppUi()
-    view.show()
-    sys.exit(app.exec())
-
-if __name__ == '__main__':
-    main()

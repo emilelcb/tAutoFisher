@@ -1,0 +1,39 @@
+[project]
+name = "tAutoFisher"
+version = "0.1.0"
+description = "Catch fish in Terraria legally and automatically!"
+authors = [
+    {name = "Emile Clark-Boman",email = "them@dobutterfliescry.net"}
+]
+readme = "README.md"
+license = "MIT"
+# requires-python = ">=3.9, <3.13"
+requires-python = ">=3.10, <3.15" # poetry requires >=3.10
+dependencies = [
+    # "PySide6 (==6.6.1)",
+    # "Pillow (==10.2.0)",
+    # "pynput (==1.7.6)", # THIS IS THE ISSUE
+    # "opencv-python (==4.9.0.80)",
+    # "pyautogui (==0.9.54)",
+    # "configparser (==6.0.0)"
+    "pyside6 (>=6.10.1,<7.0.0)",
+    "pillow (>=12.1.0,<13.0.0)",
+    "opencv-python (>=4.13.0.90,<5.0.0.0)",
+    "pyautogui (>=0.9.54,<0.10.0)",
+    "configparser (>=7.2.0,<8.0.0)",
+    "evdev-binary (>=1.9.2,<2.0.0)",
+    "pyinstaller (>=6.18.0,<7.0.0)",
+    # "pynput @ file:///home/me/workshop/tAutoFisher/pynput",
+    "pynput (>=1.8.1,<=1.9.1)"
+]
+
+[tool.poetry]
+packages = [{include = "tAutoFisher"}]
+[tool.poetry.scripts]
+tAutoFisher = "tAutoFisher.__main__:main"
+installer = "tAutoFisher.install:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
